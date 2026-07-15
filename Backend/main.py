@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+import os
+import re
+from pathlib import Path
+
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
+
+from resume_generator.openai_resume import ResumeGenerationError
+from resume_generator.service import generate_resume_docx
+
+load_dotenv()
+
+app = FastAPI(title="ResumeForge API", version="1.0.0")
+
+_cors_raw = os.getenv("CORS_ORIGINS", "*").strip()
+_cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()] or ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    # Required so the browser can read the download name from fetch().
+    expose_headers=["Content-Disposition", "X-Filename"],
+)
+
+
+class GenerateRequest(BaseModel):
+    jd: str = Field(..., min_length=1, description="Full job description text")
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/api/generate")
+def generate(req: GenerateRequest) -> Response:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the server.")
+
+    cache_dir = None
+    if os.getenv("RESUME_CACHE", "0") == "1":
+        cache_dir = Path("cache")
+
+    try:
+        file_name, docx_bytes = generate_resume_docx(
+            jd_text=req.jd,
+            api_key=api_key,
+            cache_dir=cache_dir,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except ResumeGenerationError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e}") from e
+
+    # ASCII-safe Content-Disposition; X-Filename carries the exact name for the SPA.
+    safe_name = re.sub(r"[^\w.\-]+", "_", file_name).strip("._") or "resume.docx"
+    if not safe_name.lower().endswith(".docx"):
+        safe_name = f"{safe_name}.docx"
+
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"',
+            "X-Filename": safe_name,
+        },
+    )
