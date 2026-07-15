@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ResumeForge</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true"></div>
+
+    <main class="shell">
+      <header class="brand">
+        <p class="brand-mark">ResumeForge</p>
+        <h1>Turn a job description into a tailored resume.</h1>
+        <p class="lede">
+          Paste the JD below. Your prompt and template stay on the server —
+          nothing secret ships to the browser.
+        </p>
+      </header>
+
+      <form id="generate-form" class="forge" novalidate>
+        <label class="field">
+          <span class="field-label">Job description</span>
+          <textarea
+            id="jd"
+            name="jd"
+            rows="14"
+            required
+            placeholder="Paste the full job description here…"
+            spellcheck="true"
+          ></textarea>
+        </label>
+
+        <div class="actions">
+          <button type="submit" id="generate-btn">Generate resume</button>
+          <p id="status" class="status" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

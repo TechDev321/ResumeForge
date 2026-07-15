@@ -1,0 +1,195 @@
+:root {
+  --ink: #152028;
+  --ink-soft: #3a4a56;
+  --paper: #f3f6f8;
+  --panel: rgba(255, 255, 255, 0.72);
+  --line: rgba(21, 32, 40, 0.12);
+  --accent: #0f6e6a;
+  --accent-hover: #0b5854;
+  --danger: #9b2c2c;
+  --radius: 14px;
+  --shadow: 0 18px 40px rgba(21, 32, 40, 0.08);
+  font-synthesis: none;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  color: var(--ink);
+  font-family: "Outfit", sans-serif;
+  background: var(--paper);
+  line-height: 1.5;
+}
+
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 55% at 12% -10%, rgba(15, 110, 106, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(42, 74, 110, 0.14), transparent 50%),
+    linear-gradient(165deg, #e8eef2 0%, #f3f6f8 45%, #eef3f1 100%);
+}
+
+.atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.shell {
+  width: min(720px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: clamp(2.5rem, 8vh, 5rem) 0 3rem;
+  animation: rise 0.7s ease-out both;
+}
+
+.brand-mark {
+  margin: 0 0 1rem;
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.brand h1 {
+  margin: 0 0 0.75rem;
+  max-width: 18ch;
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.lede {
+  margin: 0 0 2rem;
+  max-width: 42ch;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+}
+
+.forge {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  animation: rise 0.85s ease-out 0.08s both;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+textarea {
+  width: 100%;
+  min-height: 280px;
+  padding: 0.95rem 1rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: rgba(15, 110, 106, 0.55);
+  box-shadow: 0 0 0 3px rgba(15, 110, 106, 0.15);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem 1.1rem;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 10px;
+  padding: 0.85rem 1.35rem;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.status {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.status.is-error {
+  color: var(--danger);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 520px) {
+  .forge {
+    padding: 1rem;
+  }
+
+  button {
+    width: 100%;
+  }
+}
