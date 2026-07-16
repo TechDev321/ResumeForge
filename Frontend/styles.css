@@ -51,10 +51,17 @@ body {
 }
 
 .shell {
-  width: min(720px, calc(100% - 2rem));
+  width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
   padding: clamp(2.5rem, 8vh, 5rem) 0 3rem;
   animation: rise 0.7s ease-out both;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 1.25rem;
+  align-items: start;
 }
 
 .brand-mark {
@@ -81,6 +88,33 @@ body {
   max-width: 42ch;
   color: var(--ink-soft);
   font-size: 1.05rem;
+}
+
+.question-panel {
+  animation: rise 0.85s ease-out 0.16s both;
+}
+
+.panel-title {
+  margin: 0;
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.panel-hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+}
+
+.question-input {
+  min-height: 120px;
+}
+
+.answer-input {
+  min-height: 200px;
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .forge {
@@ -178,6 +212,22 @@ button:disabled {
   border-color: var(--line);
 }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(21, 32, 40, 0.05);
+  color: var(--ink);
+}
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .status {
   margin: 0;
   min-height: 1.4em;
@@ -197,6 +247,12 @@ button:disabled {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: 1fr;
   }
 }
 

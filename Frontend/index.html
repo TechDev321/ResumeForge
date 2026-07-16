@@ -20,39 +20,80 @@
         <p class="brand-mark">ResumeForge</p>
         <h1>Turn a job description into a tailored resume.</h1>
         <p class="lede">
-          Paste the JD below. Generate a resume, then optionally a matching
-          cover letter from that same resume — nothing secret ships to the
-          browser.
+          Paste the JD below. Generate a resume, then a cover letter or interview
+          answers from that same resume — nothing secret ships to the browser.
         </p>
       </header>
 
-      <form id="generate-form" class="forge" novalidate>
-        <label class="field">
-          <span class="field-label">Job description</span>
-          <textarea
-            id="jd"
-            name="jd"
-            rows="14"
-            required
-            placeholder="Paste the full job description here…"
-            spellcheck="true"
-          ></textarea>
-        </label>
+      <div class="workspace">
+        <form id="generate-form" class="forge" novalidate>
+          <h2 class="panel-title">Resume &amp; cover letter</h2>
+          <p class="panel-hint">Paste the job description, then generate a tailored resume or cover letter.</p>
 
-        <div class="actions">
-          <button type="submit" id="generate-btn">Generate resume</button>
-          <button
-            type="button"
-            id="cover-letter-btn"
-            class="btn-secondary"
-            disabled
-            title="Generate a resume first"
-          >
-            Generate cover letter
-          </button>
-          <p id="status" class="status" role="status" aria-live="polite"></p>
-        </div>
-      </form>
+          <label class="field">
+            <span class="field-label">Job description</span>
+            <textarea
+              id="jd"
+              name="jd"
+              rows="14"
+              required
+              placeholder="Paste the full job description here…"
+              spellcheck="true"
+            ></textarea>
+          </label>
+
+          <div class="actions">
+            <button type="submit" id="generate-btn">Generate resume</button>
+            <button
+              type="button"
+              id="cover-letter-btn"
+              class="btn-secondary"
+              disabled
+              title="Generate a resume first"
+            >
+              Generate cover letter
+            </button>
+            <p id="status" class="status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <section class="forge question-panel" aria-labelledby="question-heading">
+          <h2 id="question-heading" class="panel-title">Interview question</h2>
+          <p class="panel-hint">Generate a resume first, then ask a question grounded in that resume and JD.</p>
+
+          <label class="field">
+            <span class="field-label">Your question</span>
+            <textarea
+              id="question"
+              name="question"
+              class="question-input"
+              rows="4"
+              placeholder="e.g. Tell me about a time when you led a challenging project…"
+              spellcheck="true"
+            ></textarea>
+          </label>
+
+          <div class="actions">
+            <button
+              type="button"
+              id="answer-btn"
+              class="btn-secondary"
+              disabled
+              title="Generate a resume first"
+            >
+              Generate answer
+            </button>
+            <button type="button" id="copy-answer-btn" class="btn-ghost" disabled hidden>
+              Copy answer
+            </button>
+          </div>
+
+          <label class="field answer-field" id="answer-field" hidden>
+            <span class="field-label">Answer</span>
+            <textarea id="answer-output" class="answer-input" rows="8" readonly spellcheck="false"></textarea>
+          </label>
+        </section>
+      </div>
     </main>
 
     <script src="config.js"></script>

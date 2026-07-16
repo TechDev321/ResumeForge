@@ -9,6 +9,7 @@ from docx import Document
 from .cover_letter_template import create_cover_letter_template
 from .docx_utils import iter_paragraphs
 from .openai_cover_letter import CoverLetterGenerationError, generate_cover_letter_replacements
+from .openai_question import generate_interview_answer
 from .openai_resume import ResumeGenerationError, generate_replacements
 from .template_engine import apply_replacements, extract_placeholders
 
@@ -19,6 +20,7 @@ DEFAULT_TEMPLATE = "corey_resume_template(Nielsen_Disney_TCS).docx"
 DEFAULT_PROMPT = "Resume Prompt.txt"
 DEFAULT_COVER_LETTER_TEMPLATE = "corey_cover_letter_template.docx"
 DEFAULT_COVER_LETTER_PROMPT = "Cover Letter Prompt.txt"
+DEFAULT_QUESTION_PROMPT = "Question_prompt.txt"
 
 
 def strip_tag_block(text: str, tag: str) -> str:
@@ -171,3 +173,46 @@ def generate_cover_letter_docx(
     buffer = BytesIO()
     doc.save(buffer)
     return file_name, buffer.getvalue()
+
+
+def generate_question_answer(
+    *,
+    jd_text: str,
+    resume_bytes: bytes,
+    question_text: str,
+    api_key: str,
+    model: str | None = None,
+    prompt_path: str | Path | None = None,
+    cache_dir: Path | None = None,
+) -> str:
+    """Generate an interview answer from JD + resume .docx + question."""
+
+    jd = (jd_text or "").strip()
+    if not jd:
+        raise ValueError("Job description is empty")
+    if not resume_bytes:
+        raise ValueError("Resume file is empty")
+    question = (question_text or "").strip()
+    if not question:
+        raise ValueError("Question is empty")
+
+    resume_text = read_docx_text(resume_bytes)
+    if not resume_text.strip():
+        raise ValueError("Could not extract text from the resume .docx")
+
+    model = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    prompt = resolve_path(prompt_path or os.getenv("QUESTION_PROMPT", DEFAULT_QUESTION_PROMPT))
+    if not prompt.is_file():
+        raise FileNotFoundError(f"Question prompt not found: {prompt}")
+
+    prompt_rules = prompt.read_text(encoding="utf-8")
+
+    return generate_interview_answer(
+        api_key=api_key,
+        model=model,
+        prompt_rules=prompt_rules,
+        jd_text=jd,
+        resume_text=resume_text,
+        question_text=question,
+        cache_dir=cache_dir,
+    )

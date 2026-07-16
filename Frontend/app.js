@@ -1,10 +1,15 @@
 const form = document.getElementById("generate-form");
 const jdInput = document.getElementById("jd");
+const questionInput = document.getElementById("question");
 const button = document.getElementById("generate-btn");
 const coverLetterBtn = document.getElementById("cover-letter-btn");
+const answerBtn = document.getElementById("answer-btn");
+const copyAnswerBtn = document.getElementById("copy-answer-btn");
+const answerField = document.getElementById("answer-field");
+const answerOutput = document.getElementById("answer-output");
 const statusEl = document.getElementById("status");
 
-// Kept in memory after resume generate — sent automatically for cover letter.
+// Kept in memory after resume generate — sent automatically for cover letter / answers.
 /** @type {{ blob: Blob, filename: string, jd: string } | null} */
 let lastResume = null;
 
@@ -28,12 +33,30 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("is-error", isError);
 }
 
-function syncCoverLetterButton() {
+function syncResumeDependentButtons() {
   const ready = Boolean(lastResume && lastResume.blob);
   coverLetterBtn.disabled = !ready;
+  answerBtn.disabled = !ready;
   coverLetterBtn.title = ready
     ? "Generate a cover letter from the last resume"
     : "Generate a resume first";
+  answerBtn.title = ready
+    ? "Generate an interview answer from the last resume"
+    : "Generate a resume first";
+}
+
+function clearAnswer() {
+  answerOutput.value = "";
+  answerField.hidden = true;
+  copyAnswerBtn.hidden = true;
+  copyAnswerBtn.disabled = true;
+}
+
+function showAnswer(text) {
+  answerOutput.value = text;
+  answerField.hidden = false;
+  copyAnswerBtn.hidden = false;
+  copyAnswerBtn.disabled = !text;
 }
 
 function filenameFromHeaders(response, fallback = "resume.docx") {
@@ -81,16 +104,42 @@ function setBusy(isBusy) {
   button.disabled = isBusy;
   if (isBusy) {
     coverLetterBtn.disabled = true;
+    answerBtn.disabled = true;
   } else {
-    syncCoverLetterButton();
+    syncResumeDependentButtons();
   }
+}
+
+function requireMatchingResume() {
+  if (!lastResume) {
+    setStatus("Generate a resume first.", true);
+    return null;
+  }
+
+  const jd = jdInput.value.trim();
+  if (!jd) {
+    setStatus("Paste a job description first.", true);
+    jdInput.focus();
+    return null;
+  }
+
+  if (jd !== lastResume.jd) {
+    lastResume = null;
+    syncResumeDependentButtons();
+    clearAnswer();
+    setStatus("Job description changed — generate a new resume first.", true);
+    return null;
+  }
+
+  return { jd, resume: lastResume };
 }
 
 jdInput.addEventListener("input", () => {
   if (!lastResume) return;
   if (jdInput.value.trim() !== lastResume.jd) {
     lastResume = null;
-    syncCoverLetterButton();
+    syncResumeDependentButtons();
+    clearAnswer();
   }
 });
 
@@ -105,6 +154,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   setBusy(true);
+  clearAnswer();
   setStatus("Generating resume… this can take a minute.");
 
   try {
@@ -122,7 +172,7 @@ form.addEventListener("submit", async (event) => {
     const filename = filenameFromHeaders(response, "resume.docx");
     lastResume = { blob, filename, jd };
     downloadBlob(blob, filename);
-    setStatus(`Downloaded ${filename}. You can generate a cover letter next.`);
+    setStatus(`Downloaded ${filename}. You can generate a cover letter or answer next.`);
   } catch (error) {
     lastResume = null;
     const message = error instanceof Error ? error.message : "Generation failed.";
@@ -133,32 +183,16 @@ form.addEventListener("submit", async (event) => {
 });
 
 coverLetterBtn.addEventListener("click", async () => {
-  if (!lastResume) {
-    setStatus("Generate a resume first.", true);
-    return;
-  }
-
-  const jd = jdInput.value.trim();
-  if (!jd) {
-    setStatus("Paste a job description first.", true);
-    jdInput.focus();
-    return;
-  }
-
-  if (jd !== lastResume.jd) {
-    lastResume = null;
-    syncCoverLetterButton();
-    setStatus("Job description changed — generate a new resume first.", true);
-    return;
-  }
+  const ctx = requireMatchingResume();
+  if (!ctx) return;
 
   setBusy(true);
   setStatus("Generating cover letter… this can take a minute.");
 
   try {
     const body = new FormData();
-    body.append("jd", jd);
-    body.append("resume", lastResume.blob, lastResume.filename);
+    body.append("jd", ctx.jd);
+    body.append("resume", ctx.resume.blob, ctx.resume.filename);
 
     const response = await fetch(`${API_BASE}/api/generate-cover-letter`, {
       method: "POST",
@@ -181,4 +215,61 @@ coverLetterBtn.addEventListener("click", async () => {
   }
 });
 
-syncCoverLetterButton();
+answerBtn.addEventListener("click", async () => {
+  const ctx = requireMatchingResume();
+  if (!ctx) return;
+
+  const question = questionInput.value.trim();
+  if (!question) {
+    setStatus("Enter an interview question first.", true);
+    questionInput.focus();
+    return;
+  }
+
+  setBusy(true);
+  setStatus("Generating answer… this can take a moment.");
+
+  try {
+    const body = new FormData();
+    body.append("jd", ctx.jd);
+    body.append("question", question);
+    body.append("resume", ctx.resume.blob, ctx.resume.filename);
+
+    const response = await fetch(`${API_BASE}/api/generate-answer`, {
+      method: "POST",
+      body,
+    });
+
+    if (!response.ok) {
+      throw new Error(await readErrorDetail(response, `Request failed (${response.status})`));
+    }
+
+    const data = await response.json();
+    const answer = data && typeof data.answer === "string" ? data.answer : "";
+    if (!answer) {
+      throw new Error("No answer returned from the server.");
+    }
+
+    showAnswer(answer);
+    setStatus("Answer ready.");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Answer generation failed.";
+    setStatus(message, true);
+  } finally {
+    setBusy(false);
+  }
+});
+
+copyAnswerBtn.addEventListener("click", async () => {
+  const text = answerOutput.value;
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus("Answer copied to clipboard.");
+  } catch {
+    setStatus("Could not copy to clipboard.", true);
+  }
+});
+
+syncResumeDependentButtons();

@@ -1,0 +1,8 @@
+Here are some additional questions.
+Based on Job Description and my resume you should answer whenever I give you the questions.
+Only when types of questions are behavioral and situational interview questions(like beginning with telltale prompts such as: "Tell me about a time when...", "Give me an example of...", "Describe a situation where...", "Have you ever...") that require you to tell a story or provide a real-life example from your past work experience, then use STAR method with individual, different examples (!Important: don't answer with same example for several different questions), exact numbers (don't use every time but use sometimes), metrics etc, by explaining with my experience.
+- Never Write out the word "percent"; always use the symbol "%"
+- Write all metrics as numbers (.e.g., 4) instead of words (3.g., four). Exception for sequential numbers, then write as words (e.g., first).
+- Do not use long-dash(—). it tells that contents is ai generated.
+And all of the answers should be brief, consist of 100 words, human-like and spoken style.
+And show me the answers by placing each context as new line in order to read easily.

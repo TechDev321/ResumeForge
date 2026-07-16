@@ -17,3 +17,5 @@ services:
         value: "0"
       - key: COVER_LETTER_CACHE
         value: "0"
+      - key: QUESTION_CACHE
+        value: "0"
