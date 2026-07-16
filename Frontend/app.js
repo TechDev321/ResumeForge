@@ -48,15 +48,39 @@ function syncResumeDependentButtons() {
 function clearAnswer() {
   answerOutput.value = "";
   answerField.hidden = true;
-  copyAnswerBtn.hidden = true;
   copyAnswerBtn.disabled = true;
+  resetCopyButton();
 }
 
 function showAnswer(text) {
   answerOutput.value = text;
   answerField.hidden = false;
-  copyAnswerBtn.hidden = false;
   copyAnswerBtn.disabled = !text;
+  resetCopyButton();
+}
+
+function resetCopyButton() {
+  copyAnswerBtn.classList.remove("is-copied");
+  const copyIcon = copyAnswerBtn.querySelector(".icon-copy");
+  const checkIcon = copyAnswerBtn.querySelector(".icon-check");
+  const label = copyAnswerBtn.querySelector(".copy-label");
+  if (copyIcon) copyIcon.hidden = false;
+  if (checkIcon) checkIcon.hidden = true;
+  if (label) label.textContent = "Copy";
+  copyAnswerBtn.title = "Copy answer";
+  copyAnswerBtn.setAttribute("aria-label", "Copy answer to clipboard");
+}
+
+function markCopySuccess() {
+  copyAnswerBtn.classList.add("is-copied");
+  const copyIcon = copyAnswerBtn.querySelector(".icon-copy");
+  const checkIcon = copyAnswerBtn.querySelector(".icon-check");
+  const label = copyAnswerBtn.querySelector(".copy-label");
+  if (copyIcon) copyIcon.hidden = true;
+  if (checkIcon) checkIcon.hidden = false;
+  if (label) label.textContent = "Copied";
+  copyAnswerBtn.title = "Copied";
+  copyAnswerBtn.setAttribute("aria-label", "Answer copied");
 }
 
 function filenameFromHeaders(response, fallback = "resume.docx") {
@@ -266,9 +290,24 @@ copyAnswerBtn.addEventListener("click", async () => {
 
   try {
     await navigator.clipboard.writeText(text);
-    setStatus("Answer copied to clipboard.");
+    markCopySuccess();
+    setStatus("Answer copied — paste it into your application form.");
+    window.setTimeout(() => {
+      if (copyAnswerBtn.classList.contains("is-copied")) {
+        resetCopyButton();
+      }
+    }, 2000);
   } catch {
-    setStatus("Could not copy to clipboard.", true);
+    try {
+      answerOutput.focus();
+      answerOutput.select();
+      document.execCommand("copy");
+      markCopySuccess();
+      setStatus("Answer copied — paste it into your application form.");
+      window.setTimeout(resetCopyButton, 2000);
+    } catch {
+      setStatus("Could not copy to clipboard. Select the answer and copy manually.", true);
+    }
   }
 });
 

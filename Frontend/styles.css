@@ -29,6 +29,7 @@ body {
   font-family: "Outfit", sans-serif;
   background: var(--paper);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 .atmosphere {
@@ -51,43 +52,62 @@ body {
 }
 
 .shell {
-  width: min(1180px, calc(100% - 2rem));
+  width: min(1160px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: clamp(2.5rem, 8vh, 5rem) 0 3rem;
-  animation: rise 0.7s ease-out both;
+  padding: clamp(2rem, 5vh, 3.5rem) 0 3rem;
+}
+
+.brand {
+  margin-bottom: 1.75rem;
+  overflow: visible;
+}
+
+.brand-mark {
+  display: block;
+  margin: 0 0 0.75rem;
+  padding: 0.08em 0 0.2em;
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2.6rem, 5.5vw, 3.8rem);
+  letter-spacing: -0.04em;
+  line-height: 1.3;
+  overflow: visible;
 }
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.brand-mark {
-  margin: 0 0 1rem;
-  font-family: "Syne", sans-serif;
-  font-weight: 800;
-  font-size: clamp(2.4rem, 7vw, 3.4rem);
-  letter-spacing: -0.04em;
-  line-height: 1;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(1rem, 2vw, 1.5rem);
+  align-items: stretch;
 }
 
 .brand h1 {
   margin: 0 0 0.75rem;
-  max-width: 18ch;
   font-family: "Syne", sans-serif;
   font-weight: 700;
-  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
   letter-spacing: -0.03em;
-  line-height: 1.2;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .brand h1 {
+    white-space: normal;
+  }
 }
 
 .lede {
-  margin: 0 0 2rem;
-  max-width: 42ch;
+  margin: 0;
   color: var(--ink-soft);
   font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .lede {
+    white-space: normal;
+  }
 }
 
 .question-panel {
@@ -108,18 +128,12 @@ body {
   font-size: 0.92rem;
 }
 
-.question-input {
-  min-height: 120px;
-}
-
-.answer-input {
-  min-height: 200px;
-  background: rgba(255, 255, 255, 0.75);
-}
-
 .forge {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.1rem;
+  height: 100%;
+  min-height: 0;
   padding: 1.25rem;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -130,8 +144,29 @@ body {
 }
 
 .field {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
+}
+
+#generate-form > .field {
+  flex: 1 1 auto;
+}
+
+.question-panel > .field:not(.answer-field) {
+  flex: 0 0 auto;
+}
+
+.question-panel > .answer-field {
+  flex: 1 1 auto;
+}
+
+.answer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .field-label {
@@ -143,7 +178,7 @@ body {
 
 textarea {
   width: 100%;
-  min-height: 280px;
+  min-height: 140px;
   padding: 0.95rem 1rem;
   resize: vertical;
   border: 1px solid var(--line);
@@ -154,6 +189,24 @@ textarea {
   font-size: 0.98rem;
   line-height: 1.55;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#jd {
+  flex: 1 1 auto;
+  min-height: 280px;
+  height: 100%;
+}
+
+.question-input {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.answer-input {
+  flex: 1 1 auto;
+  min-height: 160px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.75);
 }
 
 textarea:focus {
@@ -167,6 +220,7 @@ textarea:focus {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.85rem 1.1rem;
+  margin-top: auto;
 }
 
 button {
@@ -212,20 +266,37 @@ button:disabled {
   border-color: var(--line);
 }
 
-.btn-ghost {
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
   background: transparent;
   color: var(--ink-soft);
   border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
-.btn-ghost:hover:not(:disabled) {
-  background: rgba(21, 32, 40, 0.05);
-  color: var(--ink);
+.btn-copy:hover:not(:disabled) {
+  background: rgba(15, 110, 106, 0.08);
+  color: var(--accent);
+  border-color: rgba(15, 110, 106, 0.35);
 }
 
-.btn-ghost:disabled {
+.btn-copy.is-copied {
+  color: var(--accent);
+  border-color: rgba(15, 110, 106, 0.45);
+  background: rgba(15, 110, 106, 0.08);
+}
+
+.btn-copy:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
+}
+
+.btn-copy svg {
+  flex-shrink: 0;
 }
 
 .status {
@@ -253,6 +324,15 @@ button:disabled {
 @media (max-width: 900px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .forge {
+    height: auto;
+  }
+
+  #jd,
+  .answer-input {
+    height: auto;
   }
 }
 
