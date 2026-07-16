@@ -1,0 +1,41 @@
+Based on my resume, create a cover letter.
+File name: FirstName_LastName_CompanyName_TargetRole_Cover_Letter.docx
+For example:
+- Corey_Deloach_Microsoft_Senior_AI_Engineer_Cover_Letter.docx  
+- Corey_Deloach_Apple_Software_Engineer_Cover_Letter.docx
+
+And follow these rules:
+- Focus on Remote-First Competencies
+* Autonomy: Detail my ability to deliver high-quality result with minimal oversight.
+Communication: Highlight mastery of asynchronous communication tools like Slack, Jira and Notion.
+* * Time Management: State how I manage time zones and structure my workday independently.
+* Trustworthiness: Emphasize my proven track record of meeting sprint goals contextually.
+Structure My Cover Letter
+
+1. The Hook (Introduction)
+* State the target role clearly.
+Mention my x years of expertise.
+* Express enthusiasm for their specific remote culture.
+
+2. The Core Value Proposition (Body Paragraph 1)
+* Showcase senior-level technical leadership
+Quantify engineering achievements using data.
+* Example: "Led a team migrating monolithic architecture to microservices, reducing latency by 30%"
+
+3. The Remote Proof (Body Paragraph 2)
+* Connect technical skills to remote execution.
+Explain how I mentor junior developers across time zones.
+* Highlight experience documentation practices that prevent communication bottlenecks.
+
+4. The Call to Action (Conclusion)
+Reiterate alignment with the company mission.
+Propose a meeting to discuss their engineering pipeline.
+Keep it brief, confident and professional.
+
+- Critical Tips:
+* The whole cover letter should be 250 to 400 words (1500 to 2500 characters).
+* Don't use "~".
+* Don't use "percent" but use "%".
+* Don't write numbers as text but as number itself. (e.g., 4 instead of four). But only if the numbers are sequential ones, then write as text. (like first instead of 1st).
+* Don't use special long-dash (-) but only use normal-dash (-).
+* Make important text bold but less than 5%.

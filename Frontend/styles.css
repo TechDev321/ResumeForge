@@ -162,6 +162,22 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(15, 110, 106, 0.45);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(15, 110, 106, 0.1);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.45;
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+
 .status {
   margin: 0;
   min-height: 1.4em;

@@ -6,7 +6,9 @@ from pathlib import Path
 
 from docx import Document
 
+from .cover_letter_template import create_cover_letter_template
 from .docx_utils import iter_paragraphs
+from .openai_cover_letter import CoverLetterGenerationError, generate_cover_letter_replacements
 from .openai_resume import ResumeGenerationError, generate_replacements
 from .template_engine import apply_replacements, extract_placeholders
 
@@ -15,6 +17,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 DEFAULT_TEMPLATE = "corey_resume_template(Nielsen_Disney_TCS).docx"
 DEFAULT_PROMPT = "Resume Prompt.txt"
+DEFAULT_COVER_LETTER_TEMPLATE = "corey_cover_letter_template.docx"
+DEFAULT_COVER_LETTER_PROMPT = "Cover Letter Prompt.txt"
 
 
 def strip_tag_block(text: str, tag: str) -> str:
@@ -89,6 +93,75 @@ def generate_resume_docx(
         prompt_rules=prompt_instructions,
         jd_text=jd,
         resume_template_text=resume_template_text,
+        placeholders=placeholders,
+        cache_dir=cache_dir,
+    )
+
+    apply_replacements(doc, replacements)
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    return file_name, buffer.getvalue()
+
+
+def read_docx_text(docx_bytes: bytes) -> str:
+    """Extract plain paragraph text from a .docx byte payload."""
+
+    doc = Document(BytesIO(docx_bytes))
+    return "\n".join(p.text for p in iter_paragraphs(doc) if (p.text or "").strip())
+
+
+def generate_cover_letter_docx(
+    *,
+    jd_text: str,
+    resume_bytes: bytes,
+    api_key: str,
+    model: str | None = None,
+    template_path: str | Path | None = None,
+    prompt_path: str | Path | None = None,
+    cache_dir: Path | None = None,
+) -> tuple[str, bytes]:
+    """Generate a filled cover letter from JD + resume .docx bytes.
+
+    Returns (file_name, docx_bytes).
+    """
+
+    jd = (jd_text or "").strip()
+    if not jd:
+        raise ValueError("Job description is empty")
+    if not resume_bytes:
+        raise ValueError("Resume file is empty")
+
+    resume_text = read_docx_text(resume_bytes)
+    if not resume_text.strip():
+        raise ValueError("Could not extract text from the resume .docx")
+
+    model = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+    template = resolve_path(
+        template_path or os.getenv("COVER_LETTER_TEMPLATE", DEFAULT_COVER_LETTER_TEMPLATE)
+    )
+    prompt = resolve_path(
+        prompt_path or os.getenv("COVER_LETTER_PROMPT", DEFAULT_COVER_LETTER_PROMPT)
+    )
+
+    if not template.is_file():
+        create_cover_letter_template(template)
+    if not prompt.is_file():
+        raise FileNotFoundError(f"Cover letter prompt not found: {prompt}")
+
+    prompt_rules = prompt.read_text(encoding="utf-8")
+
+    doc = Document(str(template))
+    placeholders = extract_placeholders(doc)
+    if not placeholders:
+        raise CoverLetterGenerationError("No placeholders found in cover letter template.")
+
+    file_name, replacements = generate_cover_letter_replacements(
+        api_key=api_key,
+        model=model,
+        prompt_rules=prompt_rules,
+        jd_text=jd,
+        resume_text=resume_text,
         placeholders=placeholders,
         cache_dir=cache_dir,
     )

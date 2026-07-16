@@ -20,8 +20,9 @@
         <p class="brand-mark">ResumeForge</p>
         <h1>Turn a job description into a tailored resume.</h1>
         <p class="lede">
-          Paste the JD below. Your prompt and template stay on the server —
-          nothing secret ships to the browser.
+          Paste the JD below. Generate a resume, then optionally a matching
+          cover letter from that same resume — nothing secret ships to the
+          browser.
         </p>
       </header>
 
@@ -40,6 +41,15 @@
 
         <div class="actions">
           <button type="submit" id="generate-btn">Generate resume</button>
+          <button
+            type="button"
+            id="cover-letter-btn"
+            class="btn-secondary"
+            disabled
+            title="Generate a resume first"
+          >
+            Generate cover letter
+          </button>
           <p id="status" class="status" role="status" aria-live="polite"></p>
         </div>
       </form>

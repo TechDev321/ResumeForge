@@ -15,3 +15,5 @@ services:
         sync: false
       - key: RESUME_CACHE
         value: "0"
+      - key: COVER_LETTER_CACHE
+        value: "0"
