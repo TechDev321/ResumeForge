@@ -1,0 +1,1 @@
+window.RESUMEFORGE_API_BASE = "";

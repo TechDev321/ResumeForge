@@ -4,13 +4,19 @@ const button = document.getElementById("generate-btn");
 const statusEl = document.getElementById("status");
 
 // Local: http://127.0.0.1:8000
-// Production: set window.RESUMEFORGE_API_BASE before this script, or edit below.
+// Production: set RESUMEFORGE_API_BASE on Vercel; build writes it into config.js.
 const API_BASE = (
   window.RESUMEFORGE_API_BASE ||
   (location.hostname === "localhost" || location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:8000"
-    : "https://YOUR-SERVICE.onrender.com")
+    : "")
 ).replace(/\/$/, "");
+
+if (!API_BASE) {
+  console.error(
+    "RESUMEFORGE_API_BASE is not set. Configure it on Vercel and redeploy.",
+  );
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
