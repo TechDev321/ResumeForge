@@ -5,11 +5,17 @@ import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from auth import (
+    auth_required,
+    expected_session_token,
+    require_auth,
+    verify_password,
+)
 from resume_generator.openai_cover_letter import CoverLetterGenerationError
 from resume_generator.openai_question import QuestionGenerationError
 from resume_generator.openai_resume import ResumeGenerationError
@@ -45,6 +51,19 @@ class AnswerResponse(BaseModel):
     answer: str
 
 
+class LoginRequest(BaseModel):
+    password: str = Field(..., min_length=1)
+
+
+class LoginResponse(BaseModel):
+    token: str
+    auth_required: bool
+
+
+class AuthStatusResponse(BaseModel):
+    auth_required: bool
+
+
 def _docx_attachment(file_name: str, docx_bytes: bytes) -> Response:
     safe_name = re.sub(r"[^\w.\-]+", "_", file_name).strip("._") or "document.docx"
     if not safe_name.lower().endswith(".docx"):
@@ -65,8 +84,24 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/api/auth/status", response_model=AuthStatusResponse)
+def auth_status() -> AuthStatusResponse:
+    return AuthStatusResponse(auth_required=auth_required())
+
+
+@app.post("/api/login", response_model=LoginResponse)
+def login(req: LoginRequest) -> LoginResponse:
+    if not auth_required():
+        return LoginResponse(token="", auth_required=False)
+
+    if not verify_password(req.password):
+        raise HTTPException(status_code=401, detail="Incorrect password.")
+
+    return LoginResponse(token=expected_session_token(), auth_required=True)
+
+
 @app.post("/api/generate")
-def generate(req: GenerateRequest) -> Response:
+def generate(req: GenerateRequest, _: None = Depends(require_auth)) -> Response:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured on the server.")
@@ -112,6 +147,7 @@ async def _read_resume_upload(resume: UploadFile) -> bytes:
 async def generate_cover_letter(
     jd: str = Form(..., min_length=1, description="Full job description text"),
     resume: UploadFile = File(..., description="Generated resume .docx"),
+    _: None = Depends(require_auth),
 ) -> Response:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -147,6 +183,7 @@ async def generate_answer(
     jd: str = Form(..., min_length=1, description="Full job description text"),
     question: str = Form(..., min_length=1, description="Interview question text"),
     resume: UploadFile = File(..., description="Generated resume .docx"),
+    _: None = Depends(require_auth),
 ) -> AnswerResponse:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:

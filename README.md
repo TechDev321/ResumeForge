@@ -25,10 +25,13 @@ Create `Backend/.env` from `Backend/.env.example` and set:
 ```env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4.1-mini
+APP_PASSWORD=change-me
 CORS_ORIGINS=http://127.0.0.1:5500,http://localhost:5500,http://127.0.0.1:3000,http://localhost:3000
 RESUME_CACHE=0
 COVER_LETTER_CACHE=0
 ```
+
+Leave `APP_PASSWORD` empty to disable the password gate (local only). When set, the frontend asks for the password before showing the app, and API generate routes require a session token.
 
 Start the API:
 
@@ -108,10 +111,13 @@ Required Render environment variables:
 ```env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4.1-mini
+APP_PASSWORD=your-site-password
 CORS_ORIGINS=https://your-vercel-app.vercel.app
 RESUME_CACHE=0
 COVER_LETTER_CACHE=0
 ```
+
+Change `APP_PASSWORD` anytime in Render Environment (or local `.env`) and restart/redeploy the backend. Existing browser sessions become invalid after the password changes.
 
 ### Vercel Frontend
 

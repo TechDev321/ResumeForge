@@ -1,3 +1,5 @@
+const TOKEN_KEY = "resumeforge_auth_token";
+
 const form = document.getElementById("generate-form");
 const jdInput = document.getElementById("jd");
 const questionInput = document.getElementById("question");
@@ -8,6 +10,17 @@ const copyAnswerBtn = document.getElementById("copy-answer-btn");
 const answerField = document.getElementById("answer-field");
 const answerOutput = document.getElementById("answer-output");
 const statusEl = document.getElementById("status");
+
+const authGate = document.getElementById("auth-gate");
+const appShell = document.getElementById("app-shell");
+const loginForm = document.getElementById("login-form");
+const passwordInput = document.getElementById("password-input");
+const loginBtn = document.getElementById("login-btn");
+const loginStatusEl = document.getElementById("login-status");
+const logoutBtn = document.getElementById("logout-btn");
+
+/** @type {boolean} */
+let authIsRequired = false;
 
 // Kept in memory after resume generate — sent automatically for cover letter / answers.
 /** @type {{ blob: Blob, filename: string, jd: string } | null} */
@@ -28,9 +41,70 @@ if (!API_BASE) {
   );
 }
 
+function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY) || "";
+}
+
+function setToken(token) {
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+function authHeaders(extra = {}) {
+  const headers = { ...extra };
+  const token = getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.classList.toggle("is-error", isError);
+}
+
+function setLoginStatus(message, isError = false) {
+  loginStatusEl.textContent = message;
+  loginStatusEl.classList.toggle("is-error", isError);
+}
+
+function showApp() {
+  authGate.hidden = true;
+  authGate.setAttribute("aria-hidden", "true");
+  appShell.hidden = false;
+  appShell.removeAttribute("aria-hidden");
+  if (logoutBtn) {
+    logoutBtn.hidden = !authIsRequired;
+  }
+}
+
+function showGate() {
+  appShell.hidden = true;
+  appShell.setAttribute("aria-hidden", "true");
+  authGate.hidden = false;
+  authGate.removeAttribute("aria-hidden");
+  setToken("");
+  lastResume = null;
+  if (logoutBtn) {
+    logoutBtn.hidden = true;
+  }
+  setLoginStatus("");
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.focus();
+  }
+}
+
+function logout() {
+  lastResume = null;
+  clearAnswer();
+  syncResumeDependentButtons();
+  showGate();
+  setLoginStatus("Signed out. Enter the password to continue.");
 }
 
 function syncResumeDependentButtons() {
@@ -124,6 +198,18 @@ async function readErrorDetail(response, fallback) {
   return detail;
 }
 
+async function apiFetch(url, options = {}) {
+  const headers = authHeaders(options.headers || {});
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    showGate();
+    setLoginStatus("Session expired. Please sign in again.", true);
+  }
+
+  return response;
+}
+
 function setBusy(isBusy) {
   button.disabled = isBusy;
   if (isBusy) {
@@ -158,6 +244,98 @@ function requireMatchingResume() {
   return { jd, resume: lastResume };
 }
 
+async function initAuth() {
+  if (!API_BASE) {
+    showGate();
+    setLoginStatus("API base URL is not configured.", true);
+    return;
+  }
+
+  try {
+    const statusRes = await fetch(`${API_BASE}/api/auth/status`);
+    if (!statusRes.ok) {
+      throw new Error("Could not reach auth status endpoint.");
+    }
+    const status = await statusRes.json();
+    authIsRequired = Boolean(status.auth_required);
+
+    // If the user already unlocked while this request was in flight, keep the app open.
+    if (getToken()) {
+      showApp();
+      return;
+    }
+
+    if (!authIsRequired) {
+      showApp();
+      return;
+    }
+
+    showGate();
+  } catch (error) {
+    if (getToken()) {
+      showApp();
+      return;
+    }
+    showGate();
+    const message = error instanceof Error ? error.message : "Could not check auth status.";
+    setLoginStatus(message, true);
+  }
+}
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const password = passwordInput.value;
+  if (!password) {
+    setLoginStatus("Enter the password.", true);
+    passwordInput.focus();
+    return;
+  }
+
+  loginBtn.disabled = true;
+  setLoginStatus("Checking password…");
+
+  try {
+    const response = await fetch(`${API_BASE}/api/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+
+    if (!response.ok) {
+      throw new Error(await readErrorDetail(response, "Incorrect password."));
+    }
+
+    const data = await response.json();
+    authIsRequired = Boolean(data.auth_required);
+    if (data.auth_required) {
+      if (!data.token) {
+        throw new Error("Login succeeded but no session token was returned.");
+      }
+      setToken(data.token);
+    } else {
+      setToken("");
+    }
+
+    setLoginStatus("");
+    showApp();
+  } catch (error) {
+    setToken("");
+    showGate();
+    const message = error instanceof Error ? error.message : "Login failed.";
+    setLoginStatus(message, true);
+  } finally {
+    loginBtn.disabled = false;
+  }
+});
+
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    logout();
+  });
+}
+
 jdInput.addEventListener("input", () => {
   if (!lastResume) return;
   if (jdInput.value.trim() !== lastResume.jd) {
@@ -182,7 +360,7 @@ form.addEventListener("submit", async (event) => {
   setStatus("Generating resume… this can take a minute.");
 
   try {
-    const response = await fetch(`${API_BASE}/api/generate`, {
+    const response = await apiFetch(`${API_BASE}/api/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jd }),
@@ -218,7 +396,7 @@ coverLetterBtn.addEventListener("click", async () => {
     body.append("jd", ctx.jd);
     body.append("resume", ctx.resume.blob, ctx.resume.filename);
 
-    const response = await fetch(`${API_BASE}/api/generate-cover-letter`, {
+    const response = await apiFetch(`${API_BASE}/api/generate-cover-letter`, {
       method: "POST",
       body,
     });
@@ -259,7 +437,7 @@ answerBtn.addEventListener("click", async () => {
     body.append("question", question);
     body.append("resume", ctx.resume.blob, ctx.resume.filename);
 
-    const response = await fetch(`${API_BASE}/api/generate-answer`, {
+    const response = await apiFetch(`${API_BASE}/api/generate-answer`, {
       method: "POST",
       body,
     });
@@ -312,3 +490,4 @@ copyAnswerBtn.addEventListener("click", async () => {
 });
 
 syncResumeDependentButtons();
+initAuth();

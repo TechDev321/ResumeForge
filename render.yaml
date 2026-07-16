@@ -13,6 +13,8 @@ services:
         value: gpt-4.1-mini
       - key: CORS_ORIGINS
         sync: false
+      - key: APP_PASSWORD
+        sync: false
       - key: RESUME_CACHE
         value: "0"
       - key: COVER_LETTER_CACHE
