@@ -6,10 +6,13 @@ const questionInput = document.getElementById("question");
 const button = document.getElementById("generate-btn");
 const coverLetterBtn = document.getElementById("cover-letter-btn");
 const answerBtn = document.getElementById("answer-btn");
+const cancelResumeBtn = document.getElementById("cancel-resume-btn");
+const cancelAnswerBtn = document.getElementById("cancel-answer-btn");
 const copyAnswerBtn = document.getElementById("copy-answer-btn");
 const answerField = document.getElementById("answer-field");
 const answerOutput = document.getElementById("answer-output");
 const statusEl = document.getElementById("status");
+const answerStatusEl = document.getElementById("answer-status");
 
 const authGate = document.getElementById("auth-gate");
 const appShell = document.getElementById("app-shell");
@@ -21,6 +24,12 @@ const logoutBtn = document.getElementById("logout-btn");
 
 /** @type {boolean} */
 let authIsRequired = false;
+
+/** @type {"resume" | "cover" | "answer" | null} */
+let activeJob = null;
+
+/** @type {AbortController | null} */
+let activeController = null;
 
 // Kept in memory after resume generate — sent automatically for cover letter / answers.
 /** @type {{ blob: Blob, filename: string, jd: string } | null} */
@@ -67,9 +76,45 @@ function setStatus(message, isError = false) {
   statusEl.classList.toggle("is-error", isError);
 }
 
+function setAnswerStatus(message, isError = false) {
+  answerStatusEl.textContent = message;
+  answerStatusEl.classList.toggle("is-error", isError);
+}
+
 function setLoginStatus(message, isError = false) {
   loginStatusEl.textContent = message;
   loginStatusEl.classList.toggle("is-error", isError);
+}
+
+function isAbortError(error) {
+  return (
+    error &&
+    (error.name === "AbortError" ||
+      (typeof DOMException !== "undefined" &&
+        error instanceof DOMException &&
+        error.name === "AbortError"))
+  );
+}
+
+function startJob(kind) {
+  if (activeController) {
+    activeController.abort();
+  }
+  activeJob = kind;
+  activeController = new AbortController();
+  setBusy(true, kind);
+  return activeController;
+}
+
+function finishJob() {
+  activeJob = null;
+  activeController = null;
+  setBusy(false);
+}
+
+function cancelActiveJob() {
+  if (!activeController) return;
+  activeController.abort();
 }
 
 function showApp() {
@@ -78,11 +123,12 @@ function showApp() {
   appShell.hidden = false;
   appShell.removeAttribute("aria-hidden");
   if (logoutBtn) {
-    logoutBtn.hidden = !authIsRequired;
+    logoutBtn.hidden = !(authIsRequired || getToken());
   }
 }
 
 function showGate() {
+  cancelActiveJob();
   appShell.hidden = true;
   appShell.setAttribute("aria-hidden", "true");
   authGate.hidden = false;
@@ -109,8 +155,10 @@ function logout() {
 
 function syncResumeDependentButtons() {
   const ready = Boolean(lastResume && lastResume.blob);
-  coverLetterBtn.disabled = !ready;
-  answerBtn.disabled = !ready;
+  const busy = Boolean(activeJob);
+  button.disabled = busy;
+  coverLetterBtn.disabled = busy || !ready;
+  answerBtn.disabled = busy || !ready;
   coverLetterBtn.title = ready
     ? "Generate a cover letter from the last resume"
     : "Generate a resume first";
@@ -210,12 +258,16 @@ async function apiFetch(url, options = {}) {
   return response;
 }
 
-function setBusy(isBusy) {
-  button.disabled = isBusy;
+function setBusy(isBusy, kind = null) {
   if (isBusy) {
+    button.disabled = true;
     coverLetterBtn.disabled = true;
     answerBtn.disabled = true;
+    cancelResumeBtn.hidden = !(kind === "resume" || kind === "cover");
+    cancelAnswerBtn.hidden = kind !== "answer";
   } else {
+    cancelResumeBtn.hidden = true;
+    cancelAnswerBtn.hidden = true;
     syncResumeDependentButtons();
   }
 }
@@ -336,6 +388,14 @@ if (logoutBtn) {
   });
 }
 
+cancelResumeBtn.addEventListener("click", () => {
+  cancelActiveJob();
+});
+
+cancelAnswerBtn.addEventListener("click", () => {
+  cancelActiveJob();
+});
+
 jdInput.addEventListener("input", () => {
   if (!lastResume) return;
   if (jdInput.value.trim() !== lastResume.jd) {
@@ -355,8 +415,9 @@ form.addEventListener("submit", async (event) => {
     return;
   }
 
-  setBusy(true);
+  const controller = startJob("resume");
   clearAnswer();
+  setAnswerStatus("");
   setStatus("Generating resume… this can take a minute.");
 
   try {
@@ -364,6 +425,7 @@ form.addEventListener("submit", async (event) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jd }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -376,11 +438,16 @@ form.addEventListener("submit", async (event) => {
     downloadBlob(blob, filename);
     setStatus(`Downloaded ${filename}. You can generate a cover letter or answer next.`);
   } catch (error) {
-    lastResume = null;
-    const message = error instanceof Error ? error.message : "Generation failed.";
-    setStatus(message, true);
+    if (isAbortError(error)) {
+      lastResume = null;
+      setStatus("Resume generation cancelled.");
+    } else {
+      lastResume = null;
+      const message = error instanceof Error ? error.message : "Generation failed.";
+      setStatus(message, true);
+    }
   } finally {
-    setBusy(false);
+    finishJob();
   }
 });
 
@@ -388,7 +455,8 @@ coverLetterBtn.addEventListener("click", async () => {
   const ctx = requireMatchingResume();
   if (!ctx) return;
 
-  setBusy(true);
+  const controller = startJob("cover");
+  setAnswerStatus("");
   setStatus("Generating cover letter… this can take a minute.");
 
   try {
@@ -399,6 +467,7 @@ coverLetterBtn.addEventListener("click", async () => {
     const response = await apiFetch(`${API_BASE}/api/generate-cover-letter`, {
       method: "POST",
       body,
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -410,10 +479,14 @@ coverLetterBtn.addEventListener("click", async () => {
     downloadBlob(blob, filename);
     setStatus(`Downloaded ${filename}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Cover letter generation failed.";
-    setStatus(message, true);
+    if (isAbortError(error)) {
+      setStatus("Cover letter generation cancelled.");
+    } else {
+      const message = error instanceof Error ? error.message : "Cover letter generation failed.";
+      setStatus(message, true);
+    }
   } finally {
-    setBusy(false);
+    finishJob();
   }
 });
 
@@ -423,13 +496,14 @@ answerBtn.addEventListener("click", async () => {
 
   const question = questionInput.value.trim();
   if (!question) {
-    setStatus("Enter an interview question first.", true);
+    setAnswerStatus("Enter an interview question first.", true);
     questionInput.focus();
     return;
   }
 
-  setBusy(true);
-  setStatus("Generating answer… this can take a moment.");
+  const controller = startJob("answer");
+  setStatus("");
+  setAnswerStatus("Generating answer… this can take a moment.");
 
   try {
     const body = new FormData();
@@ -440,6 +514,7 @@ answerBtn.addEventListener("click", async () => {
     const response = await apiFetch(`${API_BASE}/api/generate-answer`, {
       method: "POST",
       body,
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -453,12 +528,16 @@ answerBtn.addEventListener("click", async () => {
     }
 
     showAnswer(answer);
-    setStatus("Answer ready.");
+    setAnswerStatus("Answer ready.");
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Answer generation failed.";
-    setStatus(message, true);
+    if (isAbortError(error)) {
+      setAnswerStatus("Answer generation cancelled.");
+    } else {
+      const message = error instanceof Error ? error.message : "Answer generation failed.";
+      setAnswerStatus(message, true);
+    }
   } finally {
-    setBusy(false);
+    finishJob();
   }
 });
 
@@ -469,7 +548,7 @@ copyAnswerBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(text);
     markCopySuccess();
-    setStatus("Answer copied — paste it into your application form.");
+    setAnswerStatus("Answer copied — paste it into your application form.");
     window.setTimeout(() => {
       if (copyAnswerBtn.classList.contains("is-copied")) {
         resetCopyButton();
@@ -481,10 +560,10 @@ copyAnswerBtn.addEventListener("click", async () => {
       answerOutput.select();
       document.execCommand("copy");
       markCopySuccess();
-      setStatus("Answer copied — paste it into your application form.");
+      setAnswerStatus("Answer copied — paste it into your application form.");
       window.setTimeout(resetCopyButton, 2000);
     } catch {
-      setStatus("Could not copy to clipboard. Select the answer and copy manually.", true);
+      setAnswerStatus("Could not copy to clipboard. Select the answer and copy manually.", true);
     }
   }
 });

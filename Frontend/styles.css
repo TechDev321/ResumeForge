@@ -391,6 +391,21 @@ button:disabled {
   border-color: var(--line);
 }
 
+.btn-cancel {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(155, 44, 44, 0.35);
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(155, 44, 44, 0.08);
+  color: var(--danger);
+}
+
+.btn-cancel:disabled {
+  opacity: 0.45;
+}
+
 .btn-copy {
   display: inline-flex;
   align-items: center;
