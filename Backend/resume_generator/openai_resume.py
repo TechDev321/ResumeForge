@@ -16,7 +16,7 @@ class ResumeGenerationError(RuntimeError):
 
 # Increment this when post-processing rules change in ways that should invalidate
 # old cached generations.
-_CACHE_VERSION = 8
+_CACHE_VERSION = 10
 
 
 _EARLY_ROLE_SENIORITY_BANNED_RE = re.compile(
@@ -39,6 +39,47 @@ _ROLE_TITLE_SPLIT_RE = re.compile(r"\s*(?:\r?\n|;)+\s*")
 # match the JD, we defensively normalize them to preserve a natural progression.
 _LOW_SENIORITY_WORD_RE = re.compile(r"\b(Junior|Associate|Entry[- ]Level|Intern)\b", re.IGNORECASE)
 _LOW_SENIORITY_LEADING_RE = re.compile(r"^(Junior|Associate|Entry[- ]Level|Intern)\s+", re.IGNORECASE)
+
+# Header line in the DOCX template:
+#   << Main-Title >> | << Sub-Title-1 >> · << Sub-Title-2 >> · … · << Sub-Title-5 >>
+# Main-Title = role only; Sub-Title-* = one stack keyword each.
+_MAIN_TITLE_SEP_RE = re.compile(r"\s*[|—–]\s*")
+_MAIN_TITLE_KW_SPLIT_RE = re.compile(r"\s*[·•|,]\s*")
+_MAIN_TITLE_MAX_KEYWORDS = 5
+_SUB_TITLE_KEYS = tuple(f"<< Sub-Title-{i} >>" for i in range(1, _MAIN_TITLE_MAX_KEYWORDS + 1))
+_JOB_TITLE_LIKE_RE = re.compile(
+    r"\b(Engineer|Developer|Analyst|Specialist|Coordinator|Architect|Manager|Programmer)\b",
+    re.IGNORECASE,
+)
+_MAIN_TITLE_ABSTRACT_RE = re.compile(
+    r"""^(?:
+        architecture|architectures|
+        scalable\s+systems?|
+        leadership|
+        collaboration|
+        troubleshooting|
+        code\s+quality|
+        cross[- ]functional\s+teams?|
+        software\s+development\s+lifecycle|sdlc|
+        performance\s+optimization|
+        security\s+practices?|
+        continuous\s+delivery|
+        continuous\s+integration|
+        backend\s+development|
+        frontend\s+development|
+        full[- ]?stack\s+development|
+        microservices?|
+        event[- ]driven\s+systems?|
+        cloud\s+integration|
+        automated\s+testing|
+        rest\s+apis?|
+        api\s+design|
+        agile|
+        ci/?cd|
+        devops
+    )$""",
+    re.IGNORECASE | re.VERBOSE,
+)
 
 
 def _has_low_seniority_modifier(title: str) -> bool:
@@ -198,6 +239,9 @@ def _ensure_file_name(
 
     company, job_from_jd = _parse_jd_header(jd_text)
     role = replacements.get("<< Main-Title >>") or replacements.get("<< Role-Title-1 >>") or job_from_jd
+    if isinstance(role, str):
+        # Filename should use the role only, not the keyword suffix.
+        role = _MAIN_TITLE_SEP_RE.split(role, maxsplit=1)[0].strip() or role
     person = _person_name_token(resume_template_text=resume_template_text)
 
     built = f"{person}_{_title_case_token(company)}_{_title_case_token(role)}.docx"
@@ -254,6 +298,119 @@ def _normalize_role_titles_one_per_slot(replacements: dict[str, str]) -> dict[st
         title = re.sub(r"\s{2,}", " ", title).strip(" -|,\t")
 
         out[k] = title
+
+    return out
+
+
+def _is_main_title_abstract_keyword(token: str) -> bool:
+    t = (token or "").strip()
+    if not t:
+        return True
+    if _MAIN_TITLE_ABSTRACT_RE.match(t):
+        return True
+    # Alternate job titles belong in Role-Title-*, never in header keywords.
+    if _JOB_TITLE_LIKE_RE.search(t):
+        return True
+    # Multi-word soft phrases the model often dumps after • separators.
+    words = t.lower().split()
+    if len(words) >= 2 and words[-1] in {
+        "development",
+        "systems",
+        "practices",
+        "optimization",
+        "lifecycle",
+        "teams",
+        "delivery",
+        "integration",
+        "testing",
+        "quality",
+        "design",
+        "collaboration",
+        "troubleshooting",
+    }:
+        # Allow real stack names like "ASP.NET Core" / "SQL Server" (tools/platforms).
+        stackish = {"net", "asp.net", "sql", "server", "core", "node.js", "next.js", "spring"}
+        if not any(w.strip(".#") in stackish or "." in w for w in words):
+            return True
+    return False
+
+
+def _extract_header_role_and_keywords(text: str) -> tuple[str, list[str]]:
+    """Parse a possibly packed header string into (role, keywords)."""
+
+    text = (text or "").replace("**", "").strip()
+    text = re.sub(r"\s{2,}", " ", text)
+    if not text:
+        return "", []
+
+    parts = _MAIN_TITLE_SEP_RE.split(text, maxsplit=1)
+    role = (parts[0] or "").strip(" -|,\t")
+    kw_blob = parts[1].strip() if len(parts) > 1 else ""
+
+    # Cut off any secondary role/keyword dump after another dash/pipe inside kw_blob.
+    if kw_blob:
+        kw_blob = _MAIN_TITLE_SEP_RE.split(kw_blob, maxsplit=1)[0].strip()
+
+    if not kw_blob and "·" in text:
+        bits = [b.strip() for b in text.split("·") if b.strip()]
+        if bits and _JOB_TITLE_LIKE_RE.search(bits[0]):
+            role, kw_blob = bits[0], " · ".join(bits[1:])
+
+    keywords: list[str] = []
+    seen: set[str] = set()
+    for tok in _MAIN_TITLE_KW_SPLIT_RE.split(kw_blob):
+        tok = tok.strip(" -|,\t.()[]")
+        if not tok or _is_main_title_abstract_keyword(tok):
+            continue
+        low = tok.lower()
+        if low in seen:
+            continue
+        seen.add(low)
+        keywords.append(tok)
+
+    return role, keywords
+
+
+def _normalize_main_title(replacements: dict[str, str]) -> dict[str, str]:
+    """Clamp header placeholders to: Role | k1 · k2 · k3 · k4 · k5.
+
+    The DOCX template already joins:
+      << Main-Title >> | << Sub-Title-1 >> · … · << Sub-Title-5 >>
+    so Main-Title must be role-only and each Sub-Title a single stack keyword.
+    """
+
+    out = dict(replacements)
+    main_key = "<< Main-Title >>"
+    raw_main = out.get(main_key, "")
+    role, from_main = _extract_header_role_and_keywords(raw_main if isinstance(raw_main, str) else "")
+
+    if not role:
+        fallback = out.get("<< Role-Title-1 >>")
+        role = fallback.strip() if isinstance(fallback, str) and fallback.strip() else "Software Engineer"
+
+    # Prefer keywords packed into Main-Title, then any usable Sub-Title values.
+    candidates: list[str] = list(from_main)
+    seen = {k.lower() for k in candidates}
+    for sk in _SUB_TITLE_KEYS:
+        val = out.get(sk, "")
+        if not isinstance(val, str):
+            continue
+        # Sub-titles should be single tokens; still split if the model stuffed several in.
+        for tok in _MAIN_TITLE_KW_SPLIT_RE.split(val.replace("**", "").strip()) or [val]:
+            tok = tok.strip(" -|,\t.()[]")
+            if not tok or _is_main_title_abstract_keyword(tok):
+                continue
+            low = tok.lower()
+            if low in seen:
+                continue
+            seen.add(low)
+            candidates.append(tok)
+
+    keywords = candidates[:_MAIN_TITLE_MAX_KEYWORDS]
+
+    out[main_key] = role
+    for i, sk in enumerate(_SUB_TITLE_KEYS):
+        out[sk] = keywords[i] if i < len(keywords) else ""
 
     return out
 
@@ -450,6 +607,7 @@ IMPORTANT:
 - Use **double-asterisk** markers to indicate bold parts inside replacement values (the renderer will convert them to Word bold runs).
 - Do not include the placeholder tokens in the replacement values.
 - Do not output any text outside JSON.
+- << Main-Title >> = role title ONLY. << Sub-Title-1>>..<< Sub-Title-5 >> = one stack keyword each (not alternate job titles). Template already joins them as: Role | k1 · k2 · k3 · k4 · k5.
 
 <JD>
 {jd_text.strip()}
@@ -520,6 +678,9 @@ Placeholders to fill (must include all):
 
     # Guardrail: prevent apparent seniority regression (e.g., "Software Engineer" -> "Junior").
     replacements_str = _sanitize_title_progression(replacements_str)
+
+    # Clamp header to: Role | exactly up to 5 stack keywords.
+    replacements_str = _normalize_main_title(replacements_str)
 
     # Final guardrail: keep earliest role title non-senior.
     replacements_str = _sanitize_earliest_role_title(replacements_str)

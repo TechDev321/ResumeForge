@@ -42,14 +42,20 @@ At least 1 non-engineering collaboration bullet per role (product, design, ops, 
 STRICT PROHIBITION: NO mentoring, coaching, teaching, guiding, onboarding, or developing others
 
 FORMATTING
-Header
-Role Title | Keyword · Keyword · Keyword · Keyword · Keyword
-5 stack-level keywords only (languages, frameworks, cloud, databases, tools)
-NO abstract terms (architecture, scalable systems, leadership)
-For example:
+Header (template line: << Main-Title >> | << Sub-Title-1 >> · … · << Sub-Title-5 >>)
+- << Main-Title >> = Role Title ONLY (e.g. Full Stack Engineer). No keywords, no pipe, no dashes.
+- << Sub-Title-1 >> … << Sub-Title-5 >> = exactly one stack keyword each (language, framework, cloud, database, or tool)
+- NO alternate job titles in Sub-Titles (not "Software Developer", "Cloud Engineer", etc.)
+- NO abstract/soft terms: architecture, scalable systems, leadership, collaboration,
+  agile, backend development, frontend development, troubleshooting, code quality,
+  cross-functional teams, SDLC, performance optimization, etc.
+Resulting line must look like:
 - Full Stack Engineer | TypeScript · React · Python · AWS · Node.js
 - Software Engineer | React · Next.js · TypeScript · Node.js · AWS
-- Software Engineer | ASP.NET Core • C# • SQL Server • Azure • Docker
+- Software Engineer | ASP.NET Core · C# · SQL Server · Azure · Docker
+WRONG:
+- Main-Title packed with "Role | k1 · k2 · …"
+- Sub-Titles filled with alternate role names (Software Developer • Application Engineer • …)
 
 Summary
 Max 50 words
@@ -87,6 +93,7 @@ Resume Generation → Apply all rules above
 FINAL VALIDATION CHECKLIST
 No JD phrasing copied
 Human-like tone (no long dashes —)
+<< Main-Title >> is role-only; Sub-Title-1..5 are 5 stack keywords (no alternate job titles)
 Bold usage 15–20%
 Exactly 6/5/4 bullets per role
 No mentoring content
