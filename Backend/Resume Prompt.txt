@@ -44,9 +44,12 @@ STRICT PROHIBITION: NO mentoring, coaching, teaching, guiding, onboarding, or de
 FORMATTING
 Header
 Role Title | Keyword · Keyword · Keyword · Keyword · Keyword
-
 5 stack-level keywords only (languages, frameworks, cloud, databases, tools)
 NO abstract terms (architecture, scalable systems, leadership)
+For example:
+- Full Stack Engineer | TypeScript · React · Python · AWS · Node.js
+- Software Engineer | React · Next.js · TypeScript · Node.js · AWS
+- Software Engineer | ASP.NET Core • C# • SQL Server • Azure • Docker
 
 Summary
 Max 50 words
