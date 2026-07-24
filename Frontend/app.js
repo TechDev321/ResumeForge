@@ -9,10 +9,15 @@ const answerBtn = document.getElementById("answer-btn");
 const cancelResumeBtn = document.getElementById("cancel-resume-btn");
 const cancelAnswerBtn = document.getElementById("cancel-answer-btn");
 const copyAnswerBtn = document.getElementById("copy-answer-btn");
+const downloadBtn = document.getElementById("download-btn");
 const answerField = document.getElementById("answer-field");
 const answerOutput = document.getElementById("answer-output");
 const statusEl = document.getElementById("status");
 const answerStatusEl = document.getElementById("answer-status");
+const previewFilenameEl = document.getElementById("preview-filename");
+const previewEmptyEl = document.getElementById("preview-empty");
+const previewLoadingEl = document.getElementById("preview-loading");
+const previewDocEl = document.getElementById("preview-doc");
 
 const authGate = document.getElementById("auth-gate");
 const appShell = document.getElementById("app-shell");
@@ -34,6 +39,13 @@ let activeController = null;
 // Kept in memory after resume generate — sent automatically for cover letter / answers.
 /** @type {{ blob: Blob, filename: string, jd: string } | null} */
 let lastResume = null;
+
+// Currently shown document in the preview panel (resume or cover letter).
+/** @type {{ blob: Blob, filename: string, kind: "resume" | "cover" } | null} */
+let previewDoc = null;
+
+/** @type {number} */
+let previewRenderToken = 0;
 
 // Local: http://127.0.0.1:8000
 // Production: set RESUMEFORGE_API_BASE on Vercel; build writes it into config.js.
@@ -135,6 +147,7 @@ function showGate() {
   authGate.removeAttribute("aria-hidden");
   setToken("");
   lastResume = null;
+  clearPreview();
   if (logoutBtn) {
     logoutBtn.hidden = true;
   }
@@ -147,6 +160,7 @@ function showGate() {
 
 function logout() {
   lastResume = null;
+  clearPreview();
   clearAnswer();
   syncResumeDependentButtons();
   showGate();
@@ -233,6 +247,84 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
+function setPreviewChrome({ filename, empty, loading, ready }) {
+  previewFilenameEl.textContent = filename || "Document preview";
+  previewEmptyEl.hidden = !empty;
+  previewLoadingEl.hidden = !loading;
+  previewDocEl.hidden = !ready;
+  const canDownload = Boolean(previewDoc);
+  downloadBtn.disabled = !canDownload;
+  downloadBtn.title = canDownload
+    ? `Download ${previewDoc.filename}`
+    : "Generate a document first";
+}
+
+function clearPreview() {
+  previewRenderToken += 1;
+  previewDoc = null;
+  previewDocEl.innerHTML = "";
+  setPreviewChrome({
+    filename: "Document preview",
+    empty: true,
+    loading: false,
+    ready: false,
+  });
+}
+
+async function showPreview(blob, filename, kind) {
+  const token = ++previewRenderToken;
+  previewDoc = { blob, filename, kind };
+  previewDocEl.innerHTML = "";
+  setPreviewChrome({
+    filename,
+    empty: false,
+    loading: true,
+    ready: false,
+  });
+
+  if (!window.docx || typeof window.docx.renderAsync !== "function") {
+    if (token !== previewRenderToken) return;
+    setPreviewChrome({
+      filename,
+      empty: false,
+      loading: false,
+      ready: true,
+    });
+    previewDocEl.hidden = false;
+    previewDocEl.innerHTML =
+      "<p class=\"preview-empty-hint\">Preview library failed to load. You can still download the DOCX.</p>";
+    return;
+  }
+
+  try {
+    await window.docx.renderAsync(blob, previewDocEl, null, {
+      className: "docx",
+      inWrapper: true,
+      breakPages: true,
+      ignoreWidth: false,
+      ignoreHeight: false,
+    });
+    if (token !== previewRenderToken) return;
+    setPreviewChrome({
+      filename,
+      empty: false,
+      loading: false,
+      ready: true,
+    });
+  } catch (error) {
+    if (token !== previewRenderToken) return;
+    console.error("DOCX preview failed:", error);
+    previewDocEl.innerHTML =
+      "<p class=\"preview-empty-hint\">Could not render preview. You can still download the DOCX.</p>";
+    setPreviewChrome({
+      filename,
+      empty: false,
+      loading: false,
+      ready: true,
+    });
+  }
+}
+
 async function readErrorDetail(response, fallback) {
   let detail = fallback;
   try {
@@ -287,6 +379,7 @@ function requireMatchingResume() {
 
   if (jd !== lastResume.jd) {
     lastResume = null;
+    clearPreview();
     syncResumeDependentButtons();
     clearAnswer();
     setStatus("Job description changed — generate a new resume first.", true);
@@ -400,6 +493,7 @@ jdInput.addEventListener("input", () => {
   if (!lastResume) return;
   if (jdInput.value.trim() !== lastResume.jd) {
     lastResume = null;
+    clearPreview();
     syncResumeDependentButtons();
     clearAnswer();
   }
@@ -417,6 +511,7 @@ form.addEventListener("submit", async (event) => {
 
   const controller = startJob("resume");
   clearAnswer();
+  clearPreview();
   setAnswerStatus("");
   setStatus("Generating resume… this can take a minute.");
 
@@ -435,14 +530,16 @@ form.addEventListener("submit", async (event) => {
     const blob = await response.blob();
     const filename = filenameFromHeaders(response, "resume.docx");
     lastResume = { blob, filename, jd };
-    downloadBlob(blob, filename);
-    setStatus(`Downloaded ${filename}. You can generate a cover letter or answer next.`);
+    await showPreview(blob, filename, "resume");
+    setStatus(`Resume ready — preview on the right, then download when you want.`);
   } catch (error) {
     if (isAbortError(error)) {
       lastResume = null;
+      clearPreview();
       setStatus("Resume generation cancelled.");
     } else {
       lastResume = null;
+      clearPreview();
       const message = error instanceof Error ? error.message : "Generation failed.";
       setStatus(message, true);
     }
@@ -476,8 +573,8 @@ coverLetterBtn.addEventListener("click", async () => {
 
     const blob = await response.blob();
     const filename = filenameFromHeaders(response, "cover_letter.docx");
-    downloadBlob(blob, filename);
-    setStatus(`Downloaded ${filename}`);
+    await showPreview(blob, filename, "cover");
+    setStatus(`Cover letter ready — preview on the right, then download when you want.`);
   } catch (error) {
     if (isAbortError(error)) {
       setStatus("Cover letter generation cancelled.");
@@ -568,5 +665,12 @@ copyAnswerBtn.addEventListener("click", async () => {
   }
 });
 
+downloadBtn.addEventListener("click", () => {
+  if (!previewDoc) return;
+  downloadBlob(previewDoc.blob, previewDoc.filename);
+  setStatus(`Downloaded ${previewDoc.filename}`);
+});
+
 syncResumeDependentButtons();
+clearPreview();
 initAuth();

@@ -82,128 +82,159 @@
         </div>
         <h1>Turn a job description into a tailored resume.</h1>
         <p class="lede">
-          Paste the JD below. Generate a resume, then create a matching cover letter or interview answer from that same resume.
+          Paste the JD below. Preview the generated document, then download when you are ready.
         </p>
       </header>
 
       <div class="workspace">
-        <form id="generate-form" class="forge" novalidate>
-          <h2 class="panel-title">Resume &amp; cover letter</h2>
-          <p class="panel-hint">Paste the job description, then generate a tailored resume or cover letter.</p>
+        <div class="workspace-controls">
+          <form id="generate-form" class="forge" novalidate>
+            <h2 class="panel-title">Resume &amp; cover letter</h2>
+            <p class="panel-hint">Paste the job description, then generate a tailored resume or cover letter.</p>
 
-          <label class="field">
-            <span class="field-label">Job description</span>
-            <textarea
-              id="jd"
-              name="jd"
-              rows="14"
-              required
-              placeholder="Paste the full job description here…"
-              spellcheck="true"
-            ></textarea>
-          </label>
+            <label class="field">
+              <span class="field-label">Job description</span>
+              <textarea
+                id="jd"
+                name="jd"
+                rows="14"
+                required
+                placeholder="Paste the full job description here…"
+                spellcheck="true"
+              ></textarea>
+            </label>
 
-          <div class="actions">
-            <button type="submit" id="generate-btn">Generate resume</button>
-            <button
-              type="button"
-              id="cover-letter-btn"
-              class="btn-secondary"
-              disabled
-              title="Generate a resume first"
-            >
-              Generate cover letter
-            </button>
-            <button
-              type="button"
-              id="cancel-resume-btn"
-              class="btn-cancel"
-              hidden
-              title="Cancel generation"
-            >
-              Cancel
-            </button>
-            <p id="status" class="status" role="status" aria-live="polite"></p>
-          </div>
-        </form>
-
-        <section class="forge question-panel" aria-labelledby="question-heading">
-          <h2 id="question-heading" class="panel-title">Interview question</h2>
-          <p class="panel-hint">Generate a resume first, then ask a question grounded in that resume and JD.</p>
-
-          <label class="field">
-            <span class="field-label">Your question</span>
-            <textarea
-              id="question"
-              name="question"
-              class="question-input"
-              rows="4"
-              placeholder="e.g. Tell me about a time when you led a challenging project…"
-              spellcheck="true"
-            ></textarea>
-          </label>
-
-          <div class="actions">
-            <button
-              type="button"
-              id="answer-btn"
-              class="btn-secondary"
-              disabled
-              title="Generate a resume first"
-            >
-              Generate answer
-            </button>
-            <button
-              type="button"
-              id="cancel-answer-btn"
-              class="btn-cancel"
-              hidden
-              title="Cancel generation"
-            >
-              Cancel
-            </button>
-            <p id="answer-status" class="status" role="status" aria-live="polite"></p>
-          </div>
-
-          <div class="field answer-field" id="answer-field" hidden>
-            <div class="answer-header">
-              <span class="field-label">Answer</span>
+            <div class="actions">
+              <button type="submit" id="generate-btn">Generate resume</button>
               <button
                 type="button"
-                id="copy-answer-btn"
-                class="btn-copy"
+                id="cover-letter-btn"
+                class="btn-secondary"
                 disabled
-                title="Copy answer"
-                aria-label="Copy answer to clipboard"
+                title="Generate a resume first"
               >
-                <svg class="icon-copy" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                  <rect x="9" y="9" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2" />
-                  <path
-                    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  />
-                </svg>
-                <svg class="icon-check" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" hidden>
-                  <path
-                    d="M20 6L9 17l-5-5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                <span class="copy-label">Copy</span>
+                Generate cover letter
               </button>
+              <button
+                type="button"
+                id="cancel-resume-btn"
+                class="btn-cancel"
+                hidden
+                title="Cancel generation"
+              >
+                Cancel
+              </button>
+              <p id="status" class="status" role="status" aria-live="polite"></p>
             </div>
-            <textarea id="answer-output" class="answer-input" rows="8" readonly spellcheck="false"></textarea>
+          </form>
+
+          <section class="forge question-panel" aria-labelledby="question-heading">
+            <h2 id="question-heading" class="panel-title">Interview question</h2>
+            <p class="panel-hint">Generate a resume first, then ask a question grounded in that resume and JD.</p>
+
+            <label class="field">
+              <span class="field-label">Your question</span>
+              <textarea
+                id="question"
+                name="question"
+                class="question-input"
+                rows="4"
+                placeholder="e.g. Tell me about a time when you led a challenging project…"
+                spellcheck="true"
+              ></textarea>
+            </label>
+
+            <div class="actions">
+              <button
+                type="button"
+                id="answer-btn"
+                class="btn-secondary"
+                disabled
+                title="Generate a resume first"
+              >
+                Generate answer
+              </button>
+              <button
+                type="button"
+                id="cancel-answer-btn"
+                class="btn-cancel"
+                hidden
+                title="Cancel generation"
+              >
+                Cancel
+              </button>
+              <p id="answer-status" class="status" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="field answer-field" id="answer-field" hidden>
+              <div class="answer-header">
+                <span class="field-label">Answer</span>
+                <button
+                  type="button"
+                  id="copy-answer-btn"
+                  class="btn-copy"
+                  disabled
+                  title="Copy answer"
+                  aria-label="Copy answer to clipboard"
+                >
+                  <svg class="icon-copy" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <rect x="9" y="9" width="13" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2" />
+                    <path
+                      d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    />
+                  </svg>
+                  <svg class="icon-check" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" hidden>
+                    <path
+                      d="M20 6L9 17l-5-5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span class="copy-label">Copy</span>
+                </button>
+              </div>
+              <textarea id="answer-output" class="answer-input" rows="8" readonly spellcheck="false"></textarea>
+            </div>
+          </section>
+        </div>
+
+        <section class="preview-panel" aria-labelledby="preview-heading">
+          <div class="preview-toolbar">
+            <h2 id="preview-heading" class="preview-title">
+              <span id="preview-filename">Document preview</span>
+            </h2>
+            <button
+              type="button"
+              id="download-btn"
+              class="btn-download"
+              disabled
+              title="Generate a document first"
+            >
+              Download as DOCX
+            </button>
+          </div>
+          <div class="preview-body" id="preview-body">
+            <div id="preview-empty" class="preview-empty">
+              <p>Your generated resume or cover letter will appear here.</p>
+              <p class="preview-empty-hint">Generate a document to preview it before downloading.</p>
+            </div>
+            <div id="preview-loading" class="preview-loading" hidden>
+              <p>Rendering preview…</p>
+            </div>
+            <div id="preview-doc" class="preview-doc" hidden></div>
           </div>
         </section>
       </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.6/dist/docx-preview.min.js"></script>
     <script src="config.js"></script>
     <script src="app.js"></script>
   </body>

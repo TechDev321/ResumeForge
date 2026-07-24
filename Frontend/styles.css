@@ -52,7 +52,7 @@ body {
 }
 
 .shell {
-  width: min(1160px, calc(100% - 2rem));
+  width: min(1480px, calc(100% - 2rem));
   margin: 0 auto;
   padding: clamp(2rem, 5vh, 3.5rem) 0 3rem;
 }
@@ -201,9 +201,16 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.15fr);
   gap: clamp(1rem, 2vw, 1.5rem);
-  align-items: stretch;
+  align-items: start;
+}
+
+.workspace-controls {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  min-width: 0;
 }
 
 .brand h1 {
@@ -239,6 +246,110 @@ body {
   animation: rise 0.85s ease-out 0.16s both;
 }
 
+.preview-panel {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: min(78vh, 920px);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: rise 0.85s ease-out 0.2s both;
+}
+
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-shrink: 0;
+  padding: 0.7rem 0.9rem 0.7rem 1.1rem;
+  background: rgba(21, 32, 40, 0.05);
+  border-bottom: 1px solid var(--line);
+}
+
+.preview-title {
+  margin: 0;
+  min-width: 0;
+  font-family: "Outfit", sans-serif;
+  font-weight: 500;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+#preview-filename {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-download {
+  flex-shrink: 0;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.88rem;
+}
+
+.btn-download:disabled {
+  opacity: 0.45;
+}
+
+.preview-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(58, 74, 86, 0.06), rgba(58, 74, 86, 0.1)),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 11px,
+      rgba(21, 32, 40, 0.015) 11px,
+      rgba(21, 32, 40, 0.015) 12px
+    );
+}
+
+.preview-empty,
+.preview-loading {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.preview-empty p,
+.preview-loading p {
+  margin: 0;
+  max-width: 28ch;
+}
+
+.preview-empty-hint {
+  margin-top: 0.45rem !important;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.preview-doc {
+  padding: 1.25rem;
+}
+
+.preview-doc .docx-wrapper {
+  background: transparent;
+  padding: 0;
+}
+
+.preview-doc .docx-wrapper > section.docx {
+  margin: 0 auto 1.25rem;
+  box-shadow: 0 10px 28px rgba(21, 32, 40, 0.12);
+}
+
 .panel-title {
   margin: 0;
   font-family: "Syne", sans-serif;
@@ -257,7 +368,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
-  height: 100%;
+  height: auto;
   min-height: 0;
   padding: 1.25rem;
   background: var(--panel);
@@ -276,7 +387,7 @@ body {
 }
 
 #generate-form > .field {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .question-panel > .field:not(.answer-field) {
@@ -284,7 +395,7 @@ body {
 }
 
 .question-panel > .answer-field {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 
 .answer-header {
@@ -317,9 +428,10 @@ textarea {
 }
 
 #jd {
-  flex: 1 1 auto;
-  min-height: 280px;
-  height: 100%;
+  flex: none;
+  min-height: 220px;
+  height: auto;
+  resize: vertical;
 }
 
 .question-input {
@@ -328,9 +440,9 @@ textarea {
 }
 
 .answer-input {
-  flex: 1 1 auto;
+  flex: none;
   min-height: 160px;
-  height: 100%;
+  height: auto;
   background: rgba(255, 255, 255, 0.75);
 }
 
@@ -345,7 +457,8 @@ textarea:focus {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.85rem 1.1rem;
-  margin-top: auto;
+  flex-shrink: 0;
+  margin-top: 0;
 }
 
 button {
@@ -461,9 +574,13 @@ button:disabled {
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .preview-panel {
+    min-height: 60vh;
   }
 
   .forge {
@@ -481,6 +598,14 @@ button:disabled {
     padding: 1rem;
   }
 
+  .preview-toolbar {
+    flex-wrap: wrap;
+  }
+
+  #preview-filename {
+    white-space: normal;
+  }
+
   button {
     width: 100%;
   }
@@ -491,5 +616,9 @@ button:disabled {
 
   .btn-logout span {
     display: none;
+  }
+
+  .btn-download {
+    width: 100%;
   }
 }

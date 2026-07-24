@@ -85,8 +85,9 @@ So no frontend env var is required for local development.
 1. Start backend on `http://127.0.0.1:8000`
 2. Start frontend on `http://127.0.0.1:5500`
 3. Paste a job description
-4. Click **Generate resume**
-5. After the resume downloads, click **Generate cover letter** or ask an **Interview question**
+4. Click **Generate resume** — the document appears in the preview panel
+5. Click **Download as DOCX** when you are ready
+6. Optionally generate a **cover letter** or ask an **Interview question** from that same resume
 
 The cover letter and answer flows keep the generated resume in browser memory and send it automatically to the backend. No manual re-upload is needed.
 
